@@ -36,8 +36,8 @@ func LoginUser(ctx context.Context, params *AuthenticationParams) (*Authenticati
 	return complete(ctx, params.Username)
 }
 
-//encore:api public method=POST path=/user/create
-func CreateUser(ctx context.Context, params *AuthenticationParams) (*AuthenticationResponse, error) {
+//encore:api public method=POST path=/user/register
+func RegisterUser(ctx context.Context, params *AuthenticationParams) (*AuthenticationResponse, error) {
 	if strings.TrimSpace(params.Password) == "" || strings.TrimSpace(params.Username) == "" {
 		return nil, errors.New("neither password nor username should be empty")
 	}

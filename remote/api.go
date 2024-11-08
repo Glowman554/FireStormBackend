@@ -16,19 +16,19 @@ func isValidName(name string) bool {
 	return true
 }
 
-//encore:api auth method=GET path=/package/create/:name
-func CreatePackage(ctx context.Context, name string) error {
-	if !isValidName(name) {
+//encore:api auth method=GET path=/package/create/:pkgName
+func CreatePackage(ctx context.Context, pkgName string) error {
+	if !isValidName(pkgName) {
 		return errors.New("invalid package name")
 	}
-	
+
 	uid, ok := auth.UserID()
 	if !ok {
 		return errors.New("missing uid")
 	}
 	pkg := Package{
 		Owner:   string(uid),
-		Package: name,
+		Package: pkgName,
 	}
 
 	err := createPackage(ctx, pkg)
@@ -40,14 +40,14 @@ func CreatePackage(ctx context.Context, name string) error {
 	return err
 }
 
-//encore:api auth method=GET path=/package/delete/full/:name
-func DeletePackage(ctx context.Context, name string) error {
+//encore:api auth method=GET path=/package/delete/full/:pkgName
+func DeletePackage(ctx context.Context, pkgName string) error {
 	uid, ok := auth.UserID()
 	if !ok {
 		return errors.New("missing uid")
 	}
 
-	pkg, err := loadPackage(ctx, name)
+	pkg, err := loadPackage(ctx, pkgName)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func DeletePackage(ctx context.Context, name string) error {
 	if pkg.Owner != string(uid) {
 		return errors.New("you are not allowed to delete this package")
 	}
-	err = deletePackage(ctx, name)
+	err = deletePackage(ctx, pkgName)
 	if err != nil {
 		return err
 	}
@@ -64,18 +64,14 @@ func DeletePackage(ctx context.Context, name string) error {
 	return err
 }
 
-type DeletePackageVersionProps struct {
-	Version string `json:"version" query:"version"`
-}
-
-//encore:api auth method=GET path=/package/delete/version/:name
-func DeletePackageVersion(ctx context.Context, name string, props *DeletePackageVersionProps) error {
+//encore:api auth method=GET path=/package/delete/version/:pkgName/:versionName
+func DeletePackageVersion(ctx context.Context, pkgName string, versionName string) error {
 	uid, ok := auth.UserID()
 	if !ok {
 		return errors.New("missing uid")
 	}
 
-	pkg, err := loadPackage(ctx, name)
+	pkg, err := loadPackage(ctx, pkgName)
 	if err != nil {
 		return err
 	}
@@ -83,17 +79,15 @@ func DeletePackageVersion(ctx context.Context, name string, props *DeletePackage
 	if pkg.Owner != string(uid) {
 		return errors.New("you are not allowed to delete this package version")
 	}
-	return deletePackageVersion(ctx, name, props.Version)
+	return deletePackageVersion(ctx, pkgName, versionName)
 }
 
 type UploadFileProps struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
 	Content string `json:"content"`
 }
 
-//encore:api auth method=POST path=/file/upload/:pkgName
-func UploadFile(ctx context.Context, pkgName string, props *UploadFileProps) error {
+//encore:api auth method=POST path=/file/upload/:pkgName/:versionName/*file
+func UploadFile(ctx context.Context, pkgName string, versionName string, file string, props *UploadFileProps) error {
 	uid, ok := auth.UserID()
 	if !ok {
 		return errors.New("missing uid")
@@ -112,22 +106,19 @@ func UploadFile(ctx context.Context, pkgName string, props *UploadFileProps) err
 
 	return createFile(ctx, File{
 		Package: *pkg,
-		Name:    props.Name,
-		Version: props.Version,
+		Name:    file,
+		Version: versionName,
 		Content: props.Content,
 	})
 }
 
-type ListFilesProps struct {
-	Version string `json:"version" query:"version"`
-}
 type ListFilesResponse struct {
 	Files []string `json:"files"`
 }
 
-//encore:api public method=GET path=/package/list/:pkgName
-func ListFiles(ctx context.Context, pkgName string, props *ListFilesProps) (*ListFilesResponse, error) {
-	files, err := loadVersionFileList(ctx, props.Version, pkgName)
+//encore:api public method=GET path=/package/list/:pkgName/:versionName
+func ListFiles(ctx context.Context, pkgName string, versionName string) (*ListFilesResponse, error) {
+	files, err := loadVersionFileList(ctx, versionName, pkgName)
 	if err != nil {
 		return nil, err
 	}
@@ -136,17 +127,13 @@ func ListFiles(ctx context.Context, pkgName string, props *ListFilesProps) (*Lis
 	}, nil
 }
 
-type LoadFileProps struct {
-	Version string `json:"version" query:"version"`
-	Name    string `json:"name" query:"name"`
-}
 type LoadFileResponse struct {
 	Content string `json:"content"`
 }
 
-//encore:api public method=GET path=/package/load/file/:pkgName
-func LoadFile(ctx context.Context, pkgName string, props *LoadFileProps) (*LoadFileResponse, error) {
-	content, err := loadFile(ctx, props.Name, props.Version, pkgName)
+//encore:api public method=GET path=/package/load/file/:pkgName/:versionName/*file
+func LoadFile(ctx context.Context, pkgName string, versionName string, file string) (*LoadFileResponse, error) {
+	content, err := loadFile(ctx, file, versionName, pkgName)
 	if err != nil {
 		return nil, err
 	}
